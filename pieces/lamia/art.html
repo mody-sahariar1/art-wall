@@ -32,12 +32,30 @@
   const rgba = (c, a) => "rgba(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + "," + a + ")";
   const rand = (a, b) => a + Math.random() * (b - a);
 
+  // --- storm cycle: calm -> clouds gather -> thunder & rain peak -> fade -> repeat ---
+  const CYCLE = 42; // seconds for one full loop
+  function stormIntensity(t) {
+    const tt = t % CYCLE;
+    if (tt < 6)  return 0.06;                              // calm dusk
+    if (tt < 16) return lerp(0.06, 1, smooth(6, 16, tt));   // clouds gather, wind picks up
+    if (tt < 32) return 1;                                  // storm holds
+    return lerp(1, 0.06, smooth(32, CYCLE, tt));            // storm eases back to calm
+  }
+
   // --- dusk sky, hull, sail and flash colours ---
   const SKY_TOP     = [10, 8, 18];
   const SKY_MID     = [24, 20, 51];
   const SKY_GLOW    = [58, 33, 64];
   const SKY_EMBER   = [140, 63, 58];
   const SKY_HORIZON = [232, 121, 79];
+
+  // calm-phase counterparts: a warmer, brighter sunset before the storm rolls in
+  const CALM_SKY_TOP     = [46, 54, 96];
+  const CALM_SKY_MID     = [86, 74, 120];
+  const CALM_SKY_GLOW    = [168, 100, 108];
+  const CALM_SKY_EMBER   = [232, 150, 108];
+  const CALM_SKY_HORIZON = [255, 199, 140];
+
   const HULL  = [10, 10, 16];
   const SAIL  = [58, 63, 82];
   const FLASH = [220, 230, 255];
@@ -47,14 +65,14 @@
     len: rand(10, 22), speed: rand(650, 1100), drift: rand(-40, -70)
   }));
 
-  const clouds = Array.from({ length: 5 }, (_, i) => ({
+  const clouds = Array.from({ length: 6 }, (_, i) => ({
     x: rand(0, 1), y: rand(0.02, 0.3), rx: rand(180, 380), ry: rand(40, 90),
     speed: rand(4, 12) * (i % 2 === 0 ? 1 : -1), alpha: rand(0.35, 0.6)
   }));
 
-  // --- lightning: scheduled strikes, each a jagged path from sky to horizon ---
+  // --- lightning: only strikes once the storm has built up, more often near the peak ---
   let bolt = { active: false, until: 0, a: null, b: null };
-  let nextStrikeAt = rand(2, 5);
+  let nextStrikeAt = 0;
   let shakeUntil = 0, shakeMag = 0;
 
   function buildBolt(startX) {
@@ -69,7 +87,7 @@
     return pts;
   }
 
-  function strike(t) {
+  function strike(t, intensity) {
     const startX = rand(w * 0.2, w * 0.8);
     bolt = {
       active: true,
@@ -79,45 +97,56 @@
     };
     shakeUntil = t + rand(0.5, 0.9);
     shakeMag = rand(6, 12);
-    nextStrikeAt = t + rand(3, 8);
+    nextStrikeAt = t + lerp(7, 2, intensity);
   }
 
   // --- the sea: a sum of three sine waves gives an organic, tumbling swell ---
-  function waveHeight(x, t) {
-    return 18 * Math.sin(x * 0.006 + t * 1.3)
-         + 10 * Math.sin(x * 0.013 - t * 2.1 + 1.5)
-         +  6 * Math.sin(x * 0.027 + t * 3.4);
+  function waveHeight(x, t, ampScale) {
+    if (ampScale === undefined) ampScale = 1;
+    return ampScale * (
+        18 * Math.sin(x * 0.006 + t * 1.3)
+      + 10 * Math.sin(x * 0.013 - t * 2.1 + 1.5)
+      +  6 * Math.sin(x * 0.027 + t * 3.4)
+    );
   }
 
-  function drawSky() {
+  function drawSky(intensity) {
+    const top    = mix(CALM_SKY_TOP, SKY_TOP, intensity);
+    const mid    = mix(CALM_SKY_MID, SKY_MID, intensity);
+    const glow   = mix(CALM_SKY_GLOW, SKY_GLOW, intensity);
+    const ember  = mix(CALM_SKY_EMBER, SKY_EMBER, intensity);
+    const hor    = mix(CALM_SKY_HORIZON, SKY_HORIZON, intensity);
     const g = ctx.createLinearGradient(0, 0, 0, horizonY);
-    g.addColorStop(0, rgb(SKY_TOP));
-    g.addColorStop(0.35, rgb(SKY_MID));
-    g.addColorStop(0.62, rgb(SKY_GLOW));
-    g.addColorStop(0.82, rgb(SKY_EMBER));
-    g.addColorStop(1, rgb(SKY_HORIZON));
+    g.addColorStop(0, rgb(top));
+    g.addColorStop(0.35, rgb(mid));
+    g.addColorStop(0.62, rgb(glow));
+    g.addColorStop(0.82, rgb(ember));
+    g.addColorStop(1, rgb(hor));
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, horizonY);
   }
 
-  function drawClouds(t) {
+  function drawClouds(t, intensity) {
+    const cloudColor = mix([102, 94, 120], [16, 12, 22], intensity);
     for (const c of clouds) {
       const cx = ((c.x * w + t * c.speed) % (w + 600)) - 300;
       const cy = c.y * horizonY;
+      const alpha = Math.min(c.alpha * lerp(0.35, 1.15, intensity), 0.92);
       const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, c.rx);
-      grad.addColorStop(0, rgba([20, 15, 30], c.alpha));
-      grad.addColorStop(1, rgba([20, 15, 30], 0));
+      grad.addColorStop(0, rgba(cloudColor, alpha));
+      grad.addColorStop(1, rgba(cloudColor, 0));
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.ellipse(cx, cy, c.rx, c.ry, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, c.rx * lerp(0.8, 1.15, intensity), c.ry * lerp(0.8, 1.3, intensity), 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  function drawSea(t) {
+  function drawSea(t, intensity) {
     ctx.fillStyle = "#050810";
     ctx.fillRect(0, horizonY, w, h - horizonY);
 
+    const ampScale = lerp(0.4, 1.15, intensity);
     const layers = [
       { amp: 1.0,  freq: 0.006, speed:  1.3, offsetY:  0, color: [18, 26, 42], a: 0.9 },
       { amp: 0.75, freq: 0.013, speed: -2.1, offsetY: 40, color: [28, 40, 58], a: 0.85 },
@@ -128,7 +157,7 @@
       ctx.beginPath();
       ctx.moveTo(0, h);
       for (let x = 0; x <= w; x += 12) {
-        const y = horizonY + layer.offsetY + 18 * layer.amp * Math.sin(x * layer.freq + t * layer.speed);
+        const y = horizonY + layer.offsetY + 18 * layer.amp * ampScale * Math.sin(x * layer.freq + t * layer.speed);
         ctx.lineTo(x, y);
       }
       ctx.lineTo(w, h);
@@ -138,22 +167,24 @@
 
       ctx.beginPath();
       for (let x = 0; x <= w; x += 12) {
-        const y = horizonY + layer.offsetY + 18 * layer.amp * Math.sin(x * layer.freq + t * layer.speed);
+        const y = horizonY + layer.offsetY + 18 * layer.amp * ampScale * Math.sin(x * layer.freq + t * layer.speed);
         x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.strokeStyle = "rgba(180,200,220,0.18)";
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
+
+    return ampScale;
   }
 
   // --- the ship rides the swell: its rock angle comes from the wave's local slope ---
-  function drawShip(t, flashBoost) {
+  function drawShip(t, flashBoost, ampScale) {
     const shipX = w * 0.5;
     const seaBaseY = horizonY + 55;
     const dx = 6;
-    const yHere = waveHeight(shipX, t);
-    const slope = (waveHeight(shipX + dx, t) - waveHeight(shipX - dx, t)) / (2 * dx);
+    const yHere = waveHeight(shipX, t, ampScale);
+    const slope = (waveHeight(shipX + dx, t, ampScale) - waveHeight(shipX - dx, t, ampScale)) / (2 * dx);
     const rockAngle = clamp(Math.atan(slope) * 3.2, -0.34, 0.34);
     const scale = Math.min(w, h) / 900;
 
@@ -215,11 +246,15 @@
     ctx.restore();
   }
 
-  function drawRain(t) {
-    ctx.strokeStyle = "rgba(190,210,230,0.35)";
+  function drawRain(t, intensity) {
+    const alpha = lerp(0, 0.4, smooth(0.12, 0.55, intensity));
+    if (alpha <= 0.005) return;
+    const activeCount = Math.round(raindrops.length * lerp(0.15, 1, smooth(0.12, 0.6, intensity)));
+    ctx.strokeStyle = rgba([190, 210, 230], alpha);
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (const d of raindrops) {
+    for (let i = 0; i < activeCount; i++) {
+      const d = raindrops[i];
       const yy = ((d.y0 + t * d.speed) % (h + 40)) - 20;
       const xx = ((d.x0 + t * d.drift) % (w + 160)) - 80;
       ctx.moveTo(xx, yy);
@@ -228,8 +263,8 @@
     ctx.stroke();
   }
 
-  function drawLightning(t) {
-    if (t > nextStrikeAt) strike(t);
+  function drawLightning(t, intensity) {
+    if (intensity > 0.55 && t > nextStrikeAt) strike(t, intensity);
     if (!bolt.active) return 0;
 
     const remaining = bolt.until - t;
@@ -255,6 +290,7 @@
 
   function frame() {
     const t = performance.now() / 1000;
+    const intensity = stormIntensity(t);
 
     let shakeX = 0, shakeY = 0;
     if (t < shakeUntil) {
@@ -266,12 +302,12 @@
     ctx.save();
     ctx.translate(shakeX, shakeY);
 
-    drawSky();
-    drawClouds(t);
-    drawSea(t);
-    const flashBoost = drawLightning(t);
-    drawShip(t, flashBoost);
-    drawRain(t);
+    drawSky(intensity);
+    drawClouds(t, intensity);
+    const ampScale = drawSea(t, intensity);
+    const flashBoost = drawLightning(t, intensity);
+    drawShip(t, flashBoost, ampScale);
+    drawRain(t, intensity);
 
     ctx.restore();
 
