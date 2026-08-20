@@ -3,22 +3,108 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>My art</title>
+<title>Sunrise to sunset</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0b0f1a; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: #05070f; overflow: hidden; }
+  canvas { display: block; }
 </style>
 </head>
 <body>
-<!-- ============================================================
-     THIS IS YOUR BLANK SLOT.  Paint it however you like.
+<canvas id="c"></canvas>
+<script>
+  const cv = document.getElementById("c");
+  const ctx = cv.getContext("2d");
+  let w, h;
+  function resize() { w = cv.width = innerWidth; h = cv.height = innerHeight; }
+  resize();
+  addEventListener("resize", resize);
 
-     Open Claude Code in this project and describe what you want here, e.g.:
-        "make colorful fireworks that explode"
-        "make a swirling rainbow spiral"
-        "make glowing particles that follow my mouse"
+  // --- small helpers ---
+  const lerp  = (a, b, t) => a + (b - a) * t;
+  const clamp = (x, a, b) => (x < a ? a : (x > b ? b : x));
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  const mix = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
+  const rgb = c => "rgb(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + ")";
+  const rgba = (c, a) => "rgba(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + "," + a + ")";
 
-     Save, refresh, and make it yours.
-     When you love it:  git pull -> git add . -> git commit -> git push
-     ============================================================ -->
+  // --- sky palettes (top colour, bottom colour) ---
+  const NIGHT   = { top: [6, 8, 18],    bot: [12, 16, 30] };
+  const HORIZON = { top: [74, 58, 107], bot: [255, 126, 74] };  // dusky purple over warm orange
+  const DAY     = { top: [38, 110, 214], bot: [168, 214, 240] }; // blue over pale blue
+
+  // --- sun colours by height in the sky ---
+  const SUN_LOW  = [255, 78, 38];    // deep orange-red near the horizon
+  const SUN_HIGH = [255, 246, 206];  // pale warm yellow near noon
+
+  // --- stars (fixed, in 0..1 coords so they scale) ---
+  const stars = Array.from({ length: 55 }, () => ({
+    x: Math.random(), y: Math.random() * 0.62, r: Math.random() * 1.2 + 0.3
+  }));
+
+  const TAU = Math.PI * 2;
+  const PERIOD = 12; // seconds for a full day + night
+
+  function frame() {
+    const t = performance.now() / 1000;
+    const theta = (t / PERIOD) * TAU % TAU;  // 0..2pi
+    const alt = Math.sin(theta);             // sun height: -1..1
+
+    // sky gradient (the surroundings change colour with the sun)
+    let top, bot;
+    if (alt >= 0) {
+      const d = smooth(0, 0.45, alt);        // horizon -> day
+      top = mix(HORIZON.top, DAY.top, d);
+      bot = mix(HORIZON.bot, DAY.bot, d);
+    } else {
+      const n = smooth(0, -0.4, alt);        // horizon -> night
+      top = mix(HORIZON.top, NIGHT.top, n);
+      bot = mix(HORIZON.bot, NIGHT.bot, n);
+    }
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, rgb(top));
+    g.addColorStop(1, rgb(bot));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+
+    // stars fade in at night
+    const nightness = clamp(-alt / 0.35, 0, 1);
+    if (nightness > 0.01) {
+      ctx.fillStyle = "rgba(255,255,255," + (nightness * 0.9).toFixed(3) + ")";
+      for (const s of stars) {
+        ctx.beginPath();
+        ctx.arc(s.x * w, s.y * h, s.r, 0, TAU);
+        ctx.fill();
+      }
+    }
+
+    // sun travels a semicircle: left horizon -> up and over -> right horizon
+    const horizonY = h * 0.82;
+    const R = Math.min(w * 0.45, horizonY * 0.9);
+    const cx = w / 2;
+    const sx = cx - Math.cos(theta) * R;     // left -> right
+    const sy = horizonY - Math.sin(theta) * R;
+
+    if (alt > -0.02) {
+      const sunColor = mix(SUN_LOW, SUN_HIGH, smooth(0, 0.5, alt));  // red-orange -> pale yellow
+      const rad = Math.max(8, Math.min(w, h) * 0.06);
+      // soft glow
+      const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad * 3.2);
+      glow.addColorStop(0, rgba(sunColor, 0.55));
+      glow.addColorStop(1, rgba(sunColor, 0));
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(sx, sy, rad * 3.2, 0, TAU); ctx.fill();
+      // disc
+      ctx.fillStyle = rgb(sunColor);
+      ctx.beginPath(); ctx.arc(sx, sy, rad, 0, TAU); ctx.fill();
+    }
+
+    // ground covers below the horizon, so the sun rises out of it and sets into it
+    ctx.fillStyle = rgb(mix([10, 12, 20], [4, 5, 10], nightness));
+    ctx.fillRect(0, horizonY, w, h - horizonY);
+
+    requestAnimationFrame(frame);
+  }
+  frame();
+</script>
 </body>
 </html>
