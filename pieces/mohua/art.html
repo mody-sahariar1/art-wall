@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Goa Sunset</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #150e33; overflow: hidden; }
+  svg { display: block; width: 100%; height: 100%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .star, .sway, .shimmer, .bird, .sip, .cloud { animation: none !important; }
+  }
+
+  .star { animation: twinkle 3.2s ease-in-out infinite; transform-origin: center; }
+  .star:nth-child(3n) { animation-duration: 2.4s; }
+  .star:nth-child(4n) { animation-duration: 4.1s; animation-delay: .6s; }
+  .star:nth-child(5n) { animation-delay: 1.3s; }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: .15; }
+    50%      { opacity: .95; }
+  }
+
+  .palm-fronds { transform-box: fill-box; transform-origin: bottom center; animation: sway 5.5s ease-in-out infinite; }
+  .palm-fronds.right { animation-duration: 6.2s; animation-delay: .4s; }
+
+  @keyframes sway {
+    0%, 100% { transform: rotate(-3.5deg); }
+    50%      { transform: rotate(3.5deg); }
+  }
+
+  .shimmer { animation: shimmerMove 5s linear infinite; }
+  @keyframes shimmerMove {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-160px); }
+  }
+
+  .cloud { animation: drift 90s linear infinite; }
+  .cloud.slow { animation-duration: 130s; }
+  @keyframes drift {
+    0%   { transform: translateX(-120px); }
+    100% { transform: translateX(1720px); }
+  }
+
+  .bird { animation: fly 22s linear infinite; }
+  .bird.b2 { animation-duration: 27s; animation-delay: 3s; }
+  .bird.b3 { animation-duration: 19s; animation-delay: 7s; }
+  @keyframes fly {
+    0%   { transform: translate(-80px, 0); }
+    100% { transform: translate(1720px, -40px); }
+  }
+
+  .sip-arm { transform-box: fill-box; transform-origin: 62% 30%; animation: sip 6s ease-in-out infinite; }
+  @keyframes sip {
+    0%, 78%, 100% { transform: rotate(0deg); }
+    88%           { transform: rotate(-7deg); }
+  }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#130c30"/>
+      <stop offset="30%" stop-color="#4a1f4d"/>
+      <stop offset="58%" stop-color="#c0526f"/>
+      <stop offset="80%" stop-color="#f3985a"/>
+      <stop offset="100%" stop-color="#ffd98a"/>
+    </linearGradient>
+
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#fff3c4" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#ffcf7a" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffcf7a" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="ocean" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#f0975a"/>
+      <stop offset="18%"  stop-color="#93476f"/>
+      <stop offset="55%"  stop-color="#3a2a5e"/>
+      <stop offset="100%" stop-color="#1c1740"/>
+    </linearGradient>
+
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#e8a06b"/>
+      <stop offset="100%" stop-color="#a85f45"/>
+    </linearGradient>
+
+    <clipPath id="oceanClip">
+      <rect x="0" y="560" width="1600" height="220"/>
+    </clipPath>
+
+    <pattern id="shimmerPattern" width="160" height="60" patternUnits="userSpaceOnUse">
+      <ellipse cx="20" cy="30" rx="26" ry="4" fill="#ffe3b0" opacity="0.35"/>
+      <ellipse cx="100" cy="14" rx="18" ry="3" fill="#ffe3b0" opacity="0.25"/>
+      <ellipse cx="130" cy="44" rx="14" ry="3" fill="#ffe3b0" opacity="0.2"/>
+    </pattern>
+  </defs>
+
+  <!-- sky -->
+  <rect x="0" y="0" width="1600" height="560" fill="url(#sky)"/>
+
+  <!-- stars -->
+  <g fill="#fff8e7">
+    <circle class="star" cx="120" cy="60"  r="1.6"/>
+    <circle class="star" cx="260" cy="140" r="1.2"/>
+    <circle class="star" cx="380" cy="70"  r="1.8"/>
+    <circle class="star" cx="470" cy="180" r="1.3"/>
+    <circle class="star" cx="600" cy="90"  r="1.4"/>
+    <circle class="star" cx="720" cy="50"  r="1.7"/>
+    <circle class="star" cx="150" cy="230" r="1.2"/>
+    <circle class="star" cx="820" cy="160" r="1.3"/>
+    <circle class="star" cx="930" cy="80"  r="1.6"/>
+    <circle class="star" cx="1000" cy="200" r="1.2"/>
+    <circle class="star" cx="60"  cy="330" r="1.3"/>
+    <circle class="star" cx="330" cy="280" r="1.1"/>
+    <circle class="star" cx="1300" cy="70" r="1.5"/>
+    <circle class="star" cx="1420" cy="150" r="1.2"/>
+    <circle class="star" cx="1500" cy="90" r="1.6"/>
+  </g>
+
+  <!-- soft clouds -->
+  <g opacity="0.35" fill="#f6c9a0">
+    <ellipse class="cloud" cx="200" cy="120" rx="90" ry="14"/>
+    <ellipse class="cloud slow" cx="700" cy="90" rx="120" ry="16"/>
+    <ellipse class="cloud" cx="1100" cy="150" rx="80" ry="12"/>
+  </g>
+
+  <!-- sun -->
+  <circle cx="1180" cy="560" r="150" fill="url(#sunGlow)"/>
+  <circle cx="1180" cy="560" r="72" fill="#ffe6a3"/>
+
+  <!-- ocean -->
+  <rect x="0" y="560" width="1600" height="220" fill="url(#ocean)"/>
+  <g clip-path="url(#oceanClip)">
+    <rect class="shimmer" x="-160" y="560" width="1920" height="220" fill="url(#shimmerPattern)"/>
+  </g>
+
+  <!-- birds -->
+  <g stroke="#241634" stroke-width="3" stroke-linecap="round" fill="none">
+    <g transform="translate(300,140)"><path class="bird b1" d="M0,0 q10,-12 20,0 q10,-12 20,0"/></g>
+    <g transform="translate(500,110)"><path class="bird b2" d="M0,0 q9,-10 18,0 q9,-10 18,0"/></g>
+    <g transform="translate(150,190)"><path class="bird b3" d="M0,0 q8,-9 16,0 q8,-9 16,0"/></g>
+  </g>
+
+  <!-- shoreline / sand -->
+  <path d="M0,760 Q400,720 800,745 T1600,730 L1600,900 L0,900 Z" fill="url(#sand)"/>
+  <path d="M0,760 Q400,720 800,745 T1600,730" fill="none" stroke="#ffe6c2" stroke-width="6" opacity="0.5"/>
+
+  <!-- palm tree, left -->
+  <g transform="translate(110,900)">
+    <path d="M0,0 C-6,-90 8,-180 -14,-300 C-18,-320 4,-330 10,-312 C34,-190 22,-90 26,0 Z" fill="#241634"/>
+    <g transform="translate(-2,-300)">
+      <g class="palm-fronds">
+        <path d="M0,0 C-70,-40 -150,-20 -190,20 C-140,-2 -70,-6 0,10 Z" fill="#241634"/>
+        <path d="M0,0 C60,-55 150,-45 200,0 C140,-14 70,-14 0,8 Z" fill="#241634"/>
+        <path d="M0,0 C-30,-70 -20,-140 10,-180 C20,-130 20,-70 8,-6 Z" fill="#241634"/>
+        <path d="M0,0 C40,-60 100,-90 150,-80 C100,-50 50,-24 4,4 Z" fill="#241634"/>
+        <path d="M0,0 C-40,-55 -100,-80 -150,-64 C-100,-38 -50,-16 -4,6 Z" fill="#241634"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- palm tree, right, leaning -->
+  <g transform="translate(1500,900) scale(-1,1)">
+    <path d="M0,0 C10,-100 -10,-190 20,-280 C26,-300 4,-312 -6,-292 C-30,-180 -14,-90 -20,0 Z" fill="#2b1a3a"/>
+    <g transform="translate(8,-280)">
+      <g class="palm-fronds right">
+        <path d="M0,0 C-65,-38 -140,-16 -175,22 C-128,0 -64,-4 0,10 Z" fill="#2b1a3a"/>
+        <path d="M0,0 C55,-50 138,-40 184,4 C128,-10 64,-12 0,8 Z" fill="#2b1a3a"/>
+        <path d="M0,0 C-26,-64 -16,-128 12,-164 C20,-118 18,-64 6,-4 Z" fill="#2b1a3a"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- woman sitting, drinking coconut water -->
+  <g transform="translate(640,880)">
+    <ellipse cx="10" cy="6" rx="105" ry="14" fill="#3a2010" opacity="0.25"/>
+
+    <!-- crossed legs / sitting base -->
+    <path d="M-90,0 C-90,-34 -30,-52 10,-50 C54,-52 100,-34 100,0 Z" fill="#241634"/>
+    <path d="M-70,-10 C-40,-30 20,-30 50,-10" fill="none" stroke="#3a2450" stroke-width="4" opacity="0.6"/>
+
+    <!-- torso -->
+    <path d="M-38,-48 C-46,-110 -30,-150 4,-152 C40,-150 50,-108 40,-48 C20,-60 -18,-60 -38,-48 Z" fill="#2c1a42"/>
+
+    <!-- hair, flowing back -->
+    <path d="M-2,-208 C-40,-206 -54,-170 -46,-130 C-52,-90 -46,-60 -30,-40 C-40,-90 -34,-150 -10,-186 Z" fill="#1b1030"/>
+
+    <!-- head -->
+    <circle cx="6" cy="-196" r="24" fill="#2c1a42"/>
+    <!-- bun -->
+    <circle cx="-14" cy="-214" r="10" fill="#1b1030"/>
+
+    <!-- far arm resting on knee -->
+    <path d="M-30,-96 C-46,-80 -54,-58 -50,-38" fill="none" stroke="#2c1a42" stroke-width="14" stroke-linecap="round"/>
+
+    <!-- near arm holding coconut up to mouth -->
+    <g class="sip-arm">
+      <path d="M34,-118 C54,-108 62,-160 46,-190" fill="none" stroke="#2c1a42" stroke-width="14" stroke-linecap="round"/>
+      <!-- coconut -->
+      <circle cx="44" cy="-196" r="15" fill="#3d2b1a"/>
+      <path d="M32,-204 q12,-10 24,0" fill="none" stroke="#6b4a2a" stroke-width="3" opacity="0.7"/>
+      <!-- straw -->
+      <path d="M38,-206 L18,-222" stroke="#e8c98a" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
+</body>
+</html>
