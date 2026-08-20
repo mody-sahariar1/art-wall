@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My art</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0f1a; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<!-- ============================================================
+     THIS IS YOUR SLOT.  Make it yours!
+
+     Open Claude Code in this project and just describe what you want:
+        "change this into colorful fireworks that explode"
+        "make glowing particles that follow my mouse"
+        "make a swirling rainbow spiral"
+        "make bouncing balls that change colour when they hit the walls"
+
+     Then SAVE, refresh the page, and watch it change.
+     When you love it, share it:  git pull -> git add . -> git commit -> git push
+     ============================================================ -->
+<canvas id="c"></canvas>
+<script>
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  let w, h;
+  function resize() { w = canvas.width = innerWidth; h = canvas.height = innerHeight; }
+  resize();
+  addEventListener("resize", resize);
+
+  // A random colour each time it loads. Try setting your own, e.g. "#ff5aa2"
+  const color = "hsl(" + Math.floor(Math.random() * 360) + ", 90%, 62%)";
+
+  const dots = Array.from({ length: 55 }, () => ({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    vx: (Math.random() - 0.5) * 1.1,
+    vy: (Math.random() - 0.5) * 1.1,
+    r: Math.random() * 2.5 + 1
+  }));
+
+  function tick() {
+    ctx.fillStyle = "rgba(11, 15, 26, 0.28)";   // soft fading trails
+    ctx.fillRect(0, 0, w, h);
+
+    // faint lines between nearby dots
+    for (let i = 0; i < dots.length; i++) {
+      for (let j = i + 1; j < dots.length; j++) {
+        const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 120) {
+          ctx.strokeStyle = color;
+          ctx.globalAlpha = (1 - dist / 120) * 0.25;
+          ctx.beginPath();
+          ctx.moveTo(dots[i].x, dots[i].y);
+          ctx.lineTo(dots[j].x, dots[j].y);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    // glowing dots
+    for (const d of dots) {
+      d.x += d.vx; d.y += d.vy;
+      if (d.x < 0 || d.x > w) d.vx *= -1;
+      if (d.y < 0 || d.y > h) d.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = color;
+      ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+</script>
+</body>
+</html>
