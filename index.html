@@ -15,10 +15,8 @@
   .wall { display:grid; gap:20px; padding:30px clamp(16px,4vw,48px) 10px;
           grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
           max-width:1300px; margin:0 auto; }
-  .slot { text-decoration:none; color:inherit; background:var(--card);
-          border:1px solid var(--line); border-radius:16px; overflow:hidden;
-          transition:transform .15s ease, border-color .15s ease; display:block; }
-  .slot:hover { transform:translateY(-4px); border-color:#3a4a7a; }
+  .slot { background:var(--card); border:1px solid var(--line);
+          border-radius:16px; overflow:hidden; }
   .frame { position:relative; aspect-ratio:4/3; background:#0b0f1a; }
   .frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0;
                   pointer-events:none; }
@@ -32,38 +30,38 @@
 <body>
   <header>
     <h1>&#127912; Our Creative-Coding Wall</h1>
-    <p>Everyone builds their own slot. Click any tile to open it full-screen.</p>
+    <p>Each person's animation runs live in their own slot.</p>
   </header>
 
   <main class="wall">
-    <a class="slot" href="pieces/ripon/art.html" target="_blank" rel="noopener">
-      <div class="frame"><iframe src="pieces/ripon/art.html" loading="lazy" title="Ripon's art"></iframe></div>
+    <div class="slot">
+      <div class="frame"><iframe src="pieces/ripon/art.html" loading="lazy" title="Ripon"></iframe></div>
       <div class="name">Ripon <span class="tag">host</span></div>
-    </a>
-    <a class="slot" href="pieces/nikhat/art.html" target="_blank" rel="noopener">
-      <div class="frame"><iframe src="pieces/nikhat/art.html" loading="lazy" title="Nikhat's art"></iframe></div>
+    </div>
+    <div class="slot">
+      <div class="frame"><iframe src="pieces/nikhat/art.html" loading="lazy" title="Nikhat"></iframe></div>
       <div class="name">Nikhat</div>
-    </a>
-    <a class="slot" href="pieces/lamia/art.html" target="_blank" rel="noopener">
-      <div class="frame"><iframe src="pieces/lamia/art.html" loading="lazy" title="Lamia's art"></iframe></div>
+    </div>
+    <div class="slot">
+      <div class="frame"><iframe src="pieces/lamia/art.html" loading="lazy" title="Lamia"></iframe></div>
       <div class="name">Lamia</div>
-    </a>
-    <a class="slot" href="pieces/sadee/art.html" target="_blank" rel="noopener">
-      <div class="frame"><iframe src="pieces/sadee/art.html" loading="lazy" title="Sadee's art"></iframe></div>
+    </div>
+    <div class="slot">
+      <div class="frame"><iframe src="pieces/sadee/art.html" loading="lazy" title="Sadee"></iframe></div>
       <div class="name">Sadee</div>
-    </a>
-    <a class="slot" href="pieces/sumaiya/art.html" target="_blank" rel="noopener">
-      <div class="frame"><iframe src="pieces/sumaiya/art.html" loading="lazy" title="Sumaiya's art"></iframe></div>
+    </div>
+    <div class="slot">
+      <div class="frame"><iframe src="pieces/sumaiya/art.html" loading="lazy" title="Sumaiya"></iframe></div>
       <div class="name">Sumaiya</div>
-    </a>
-    <a class="slot" href="pieces/shoaibul/art.html" target="_blank" rel="noopener">
-      <div class="frame"><iframe src="pieces/shoaibul/art.html" loading="lazy" title="Shoaibul's art"></iframe></div>
+    </div>
+    <div class="slot">
+      <div class="frame"><iframe src="pieces/shoaibul/art.html" loading="lazy" title="Shoaibul"></iframe></div>
       <div class="name">Shoaibul</div>
-    </a>
-    <a class="slot" href="pieces/liza/art.html" target="_blank" rel="noopener">
-      <div class="frame"><iframe src="pieces/liza/art.html" loading="lazy" title="Liza's art"></iframe></div>
+    </div>
+    <div class="slot">
+      <div class="frame"><iframe src="pieces/liza/art.html" loading="lazy" title="Liza"></iframe></div>
       <div class="name">Liza</div>
-    </a>
+    </div>
   </main>
 
   <footer>
