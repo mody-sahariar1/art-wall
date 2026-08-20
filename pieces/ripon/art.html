@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Sunrise to sunset</title>
+<title>A day of weather</title>
 <style>
   html, body { margin: 0; height: 100%; background: #05070f; overflow: hidden; }
   canvas { display: block; }
@@ -15,96 +15,195 @@
   const cv = document.getElementById("c");
   const ctx = cv.getContext("2d");
   let w, h;
-  function resize() { w = cv.width = innerWidth; h = cv.height = innerHeight; }
-  resize();
-  addEventListener("resize", resize);
 
-  // --- small helpers ---
   const lerp  = (a, b, t) => a + (b - a) * t;
   const clamp = (x, a, b) => (x < a ? a : (x > b ? b : x));
   const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
   const mix = (c1, c2, t) => [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
-  const rgb = c => "rgb(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + ")";
+  const rgb  = c => "rgb(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + ")";
   const rgba = (c, a) => "rgba(" + (c[0] | 0) + "," + (c[1] | 0) + "," + (c[2] | 0) + "," + a + ")";
 
-  // --- sky palettes (top colour, bottom colour) ---
   const NIGHT   = { top: [6, 8, 18],    bot: [12, 16, 30] };
-  const HORIZON = { top: [74, 58, 107], bot: [255, 126, 74] };  // dusky purple over warm orange
-  const DAY     = { top: [38, 110, 214], bot: [168, 214, 240] }; // blue over pale blue
-
-  // --- sun colours by height in the sky ---
-  const SUN_LOW  = [255, 78, 38];    // deep orange-red near the horizon
-  const SUN_HIGH = [255, 246, 206];  // pale warm yellow near noon
-
-  // --- stars (fixed, in 0..1 coords so they scale) ---
-  const stars = Array.from({ length: 55 }, () => ({
-    x: Math.random(), y: Math.random() * 0.62, r: Math.random() * 1.2 + 0.3
-  }));
+  const HORIZON = { top: [74, 58, 107], bot: [255, 126, 74] };
+  const DAY     = { top: [70, 140, 225], bot: [175, 214, 240] };
+  const SUN_LOW = [255, 78, 38], SUN_HIGH = [255, 246, 206];
+  const CLOUD_WHITE = [238, 242, 248], CLOUD_STORM = [58, 64, 78];
 
   const TAU = Math.PI * 2;
-  const PERIOD = 12; // seconds for a full day + night
+  const PERIOD = 30;          // seconds for a full day + night (slow)
+  const PI = Math.PI;
 
-  function frame() {
-    const t = performance.now() / 1000;
-    const theta = (t / PERIOD) * TAU % TAU;  // 0..2pi
-    const alt = Math.sin(theta);             // sun height: -1..1
+  // twinkling stars
+  const stars = Array.from({ length: 60 }, () => ({
+    x: Math.random(), y: Math.random() * 0.6, r: Math.random() * 1.2 + 0.4,
+    ph: Math.random() * TAU, sp: 0.8 + Math.random() * 2.2
+  }));
 
-    // sky gradient (the surroundings change colour with the sun)
-    let top, bot;
-    if (alt >= 0) {
-      const d = smooth(0, 0.45, alt);        // horizon -> day
-      top = mix(HORIZON.top, DAY.top, d);
-      bot = mix(HORIZON.bot, DAY.bot, d);
-    } else {
-      const n = smooth(0, -0.4, alt);        // horizon -> night
-      top = mix(HORIZON.top, NIGHT.top, n);
-      bot = mix(HORIZON.bot, NIGHT.bot, n);
+  // clouds (rebuilt on resize so they scale)
+  let clouds = [];
+  function buildClouds() {
+    clouds = [];
+    for (let i = 0; i < 7; i++) {
+      const puffs = [];
+      const pc = 4 + ((Math.random() * 3) | 0);
+      for (let j = 0; j < pc; j++)
+        puffs.push({ dx: (Math.random() - 0.5) * 70, dy: (Math.random() - 0.5) * 22, r: 22 + Math.random() * 26 });
+      clouds.push({
+        x: Math.random() * w, y: h * (0.12 + Math.random() * 0.32),
+        s: 0.7 + Math.random() * 0.8, speed: 18 + Math.random() * 30, puffs
+      });
     }
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, rgb(top));
-    g.addColorStop(1, rgb(bot));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+  }
 
-    // stars fade in at night
+  // rain pool (normalised coords)
+  const MAXRAIN = 160;
+  const rain = Array.from({ length: MAXRAIN }, () => ({
+    x: Math.random(), y: Math.random(), len: 10 + Math.random() * 14, sp: 600 + Math.random() * 500
+  }));
+
+  // lightning
+  let flash = 0, boltTimer = 1.5, bolt = null, boltLife = 0;
+
+  function resize() { w = cv.width = innerWidth; h = cv.height = innerHeight; buildClouds(); }
+  resize();
+  addEventListener("resize", resize);
+
+  let last = performance.now() / 1000;
+  function frame(now) {
+    const t = now / 1000;
+    let dt = t - last; last = t; if (dt > 0.05) dt = 0.05;
+
+    const theta = (t / PERIOD) * TAU % TAU;
+    const alt = Math.sin(theta);
     const nightness = clamp(-alt / 0.35, 0, 1);
-    if (nightness > 0.01) {
-      ctx.fillStyle = "rgba(255,255,255," + (nightness * 0.9).toFixed(3) + ")";
-      for (const s of stars) {
-        ctx.beginPath();
-        ctx.arc(s.x * w, s.y * h, s.r, 0, TAU);
-        ctx.fill();
-      }
-    }
 
-    // sun travels a semicircle: left horizon -> up and over -> right horizon
+    // storm builds toward midday (theta = pi/2), clears before sunset
+    let storm = 0;
+    if (theta < PI) storm = smooth(0.16 * PI, 0.42 * PI, theta) * (1 - smooth(0.58 * PI, 0.82 * PI, theta));
+
+    // --- sky (surroundings change colour) ---
+    let top, bot;
+    if (alt >= 0) { const d = smooth(0, 0.45, alt); top = mix(HORIZON.top, DAY.top, d); bot = mix(HORIZON.bot, DAY.bot, d); }
+    else { const n = smooth(0, -0.4, alt); top = mix(HORIZON.top, NIGHT.top, n); bot = mix(HORIZON.bot, NIGHT.bot, n); }
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, rgb(top)); g.addColorStop(1, rgb(bot));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+    // storm darkens the whole sky
+    if (storm > 0.001) { ctx.fillStyle = rgba([18, 22, 32], storm * 0.62); ctx.fillRect(0, 0, w, h); }
+
     const horizonY = h * 0.82;
     const R = Math.min(w * 0.45, horizonY * 0.9);
     const cx = w / 2;
-    const sx = cx - Math.cos(theta) * R;     // left -> right
-    const sy = horizonY - Math.sin(theta) * R;
 
-    if (alt > -0.02) {
-      const sunColor = mix(SUN_LOW, SUN_HIGH, smooth(0, 0.5, alt));  // red-orange -> pale yellow
-      const rad = Math.max(8, Math.min(w, h) * 0.06);
-      // soft glow
-      const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad * 3.2);
-      glow.addColorStop(0, rgba(sunColor, 0.55));
-      glow.addColorStop(1, rgba(sunColor, 0));
-      ctx.fillStyle = glow;
-      ctx.beginPath(); ctx.arc(sx, sy, rad * 3.2, 0, TAU); ctx.fill();
-      // disc
-      ctx.fillStyle = rgb(sunColor);
-      ctx.beginPath(); ctx.arc(sx, sy, rad, 0, TAU); ctx.fill();
+    // --- stars twinkle at night ---
+    if (nightness > 0.01) {
+      for (const s of stars) {
+        const tw = 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph));
+        ctx.fillStyle = "rgba(255,255,255," + (nightness * tw * 0.9).toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(s.x * w, s.y * h, s.r, 0, TAU); ctx.fill();
+      }
     }
 
-    // ground covers below the horizon, so the sun rises out of it and sets into it
+    // --- sun (day), dimmed / hidden by the storm ---
+    if (alt > -0.02) {
+      const sunA = 1 - storm * 0.9;
+      if (sunA > 0.02) {
+        const sx = cx - Math.cos(theta) * R, sy = horizonY - Math.sin(theta) * R;
+        const sc = mix(SUN_LOW, SUN_HIGH, smooth(0, 0.5, alt));
+        const rad = Math.max(8, Math.min(w, h) * 0.06);
+        const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad * 3.2);
+        glow.addColorStop(0, rgba(sc, 0.55 * sunA)); glow.addColorStop(1, rgba(sc, 0));
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sx, sy, rad * 3.2, 0, TAU); ctx.fill();
+        ctx.globalAlpha = sunA; ctx.fillStyle = rgb(sc);
+        ctx.beginPath(); ctx.arc(sx, sy, rad, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+      }
+    }
+
+    // --- moon rises once the sun is gone ---
+    if (theta > PI) {
+      const np = (theta - PI) / PI;            // 0..1 across the night
+      const mAlt = Math.sin(np * PI);
+      if (mAlt > -0.02) {
+        const mx = cx - Math.cos(np * PI) * R, my = horizonY - mAlt * R;
+        const rad = Math.max(7, Math.min(w, h) * 0.05);
+        const mc = [232, 236, 246];
+        const glow = ctx.createRadialGradient(mx, my, 0, mx, my, rad * 2.6);
+        glow.addColorStop(0, rgba(mc, 0.5)); glow.addColorStop(1, rgba(mc, 0));
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(mx, my, rad * 2.6, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgb(mc); ctx.beginPath(); ctx.arc(mx, my, rad, 0, TAU); ctx.fill();
+        ctx.fillStyle = rgba([205, 210, 222], 0.7);
+        ctx.beginPath(); ctx.arc(mx - rad * 0.3, my - rad * 0.2, rad * 0.18, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(mx + rad * 0.25, my + rad * 0.15, rad * 0.13, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(mx + rad * 0.05, my - rad * 0.35, rad * 0.10, 0, TAU); ctx.fill();
+      }
+    }
+
+    // --- clouds: white by day, storm-grey at midday, cleared by sunset ---
+    const calm = (theta < PI)
+      ? smooth(0.03 * PI, 0.15 * PI, theta) * (1 - smooth(0.62 * PI, 0.95 * PI, theta))
+      : 0;
+    const coverage = clamp(0.6 * calm + storm, 0, 1);
+    const cloudCol = mix(CLOUD_WHITE, CLOUD_STORM, storm);
+    const cloudA = coverage * 0.85;
+    for (const c of clouds) {
+      c.x += c.speed * dt;
+      if (c.x > w + 120) c.x = -120;
+      if (cloudA > 0.02) {
+        ctx.fillStyle = rgba(cloudCol, cloudA);
+        for (const p of c.puffs) {
+          ctx.beginPath();
+          ctx.arc(c.x + p.dx * c.s, c.y + p.dy * c.s, p.r * c.s, 0, TAU);
+          ctx.fill();
+        }
+      }
+    }
+
+    // --- rain during the storm ---
+    if (storm > 0.12) {
+      const n = (MAXRAIN * storm) | 0;
+      ctx.strokeStyle = "rgba(170,195,230,0.5)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const d = rain[i];
+        d.y += (d.sp * dt) / h;
+        if (d.y > 1.05) { d.y = -0.05; d.x = Math.random(); }
+        const x = d.x * w, y = d.y * h;
+        ctx.moveTo(x, y); ctx.lineTo(x + 2, y + d.len);
+      }
+      ctx.stroke();
+    }
+
+    // --- lightning during the storm ---
+    if (storm > 0.35) {
+      boltTimer -= dt;
+      if (boltTimer <= 0) {
+        flash = 1; boltLife = 0.14;
+        const bx = w * (0.25 + Math.random() * 0.5);
+        bolt = [{ x: bx, y: h * 0.14 }];
+        let y = h * 0.14;
+        while (y < horizonY) { y += h * (0.05 + Math.random() * 0.07); bolt.push({ x: bx + (Math.random() - 0.5) * w * 0.10, y }); }
+        boltTimer = (0.7 + Math.random() * 1.8) * (1.2 - storm);
+      }
+    }
+    if (flash > 0) { ctx.fillStyle = rgba([205, 218, 255], flash * 0.5); ctx.fillRect(0, 0, w, h); flash = Math.max(0, flash - dt * 6); }
+    if (boltLife > 0 && bolt) {
+      boltLife -= dt;
+      ctx.strokeStyle = "rgba(235,240,255," + clamp(boltLife / 0.14, 0, 1).toFixed(2) + ")";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(bolt[0].x, bolt[0].y);
+      for (let i = 1; i < bolt.length; i++) ctx.lineTo(bolt[i].x, bolt[i].y);
+      ctx.stroke();
+    }
+
+    // --- ground ---
     ctx.fillStyle = rgb(mix([10, 12, 20], [4, 5, 10], nightness));
     ctx.fillRect(0, horizonY, w, h - horizonY);
 
     requestAnimationFrame(frame);
   }
-  frame();
+  requestAnimationFrame(frame);
 </script>
 </body>
 </html>
