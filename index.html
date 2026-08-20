@@ -3,16 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Our Creative-Coding Wall</title>
+<title>Wall</title>
 <style>
-  :root { --bg:#0b0f1a; --card:#121829; --ink:#e8ecf6; --muted:#8b95b3; --line:#26304d; }
+  :root { --bg:#0b0f1a; --card:#121829; --ink:#e8ecf6; --line:#26304d; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--ink);
          font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
-  header { text-align:center; padding:40px 20px 8px; }
-  header h1 { margin:0; font-size:clamp(24px,4vw,40px); letter-spacing:.3px; }
-  header p { margin:10px 0 0; color:var(--muted); font-size:15px; }
-  .wall { display:grid; gap:20px; padding:30px clamp(16px,4vw,48px) 10px;
+  .wall { display:grid; gap:20px; padding:40px clamp(16px,4vw,48px);
           grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
           max-width:1300px; margin:0 auto; }
   .slot { background:var(--card); border:1px solid var(--line);
@@ -20,23 +17,14 @@
   .frame { position:relative; aspect-ratio:4/3; background:#0b0f1a; }
   .frame iframe { position:absolute; inset:0; width:100%; height:100%; border:0;
                   pointer-events:none; }
-  .name { padding:12px 15px; font-weight:600; font-size:16px;
-          display:flex; align-items:center; justify-content:space-between; }
-  .name .tag { color:var(--muted); font-weight:400; font-size:12px; }
-  footer { text-align:center; color:var(--muted); padding:28px 20px 46px; font-size:15px; }
-  footer b { color:var(--ink); }
+  .name { padding:12px 15px; font-weight:600; font-size:16px; }
 </style>
 </head>
 <body>
-  <header>
-    <h1>&#127912; Our Creative-Coding Wall</h1>
-    <p>Each person's animation runs live in their own slot.</p>
-  </header>
-
   <main class="wall">
     <div class="slot">
       <div class="frame"><iframe src="pieces/ripon/art.html" loading="lazy" title="Ripon"></iframe></div>
-      <div class="name">Ripon <span class="tag">host</span></div>
+      <div class="name">Ripon</div>
     </div>
     <div class="slot">
       <div class="frame"><iframe src="pieces/nikhat/art.html" loading="lazy" title="Nikhat"></iframe></div>
@@ -63,9 +51,5 @@
       <div class="name">Liza</div>
     </div>
   </main>
-
-  <footer>
-    The whole workflow in three words: <b>describe &rarr; share &rarr; look</b>
-  </footer>
 </body>
 </html>
