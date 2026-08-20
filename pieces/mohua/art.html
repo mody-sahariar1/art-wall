@@ -137,73 +137,6 @@
     ctx.restore();
   }
 
-  function drawWoman(x, y, t) {
-    ctx.save();
-    ctx.translate(x, y);
-
-    ctx.fillStyle = "rgba(58,32,16,0.25)";
-    ctx.beginPath(); ctx.ellipse(10, 6, 105, 14, 0, 0, TAU); ctx.fill();
-
-    ctx.fillStyle = rgb(INK);
-    ctx.beginPath();
-    ctx.moveTo(-90, 0);
-    ctx.bezierCurveTo(-90, -34, -30, -52, 10, -50);
-    ctx.bezierCurveTo(54, -52, 100, -34, 100, 0);
-    ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle = "rgba(58,36,80,0.6)"; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(-70, -10); ctx.bezierCurveTo(-40, -30, 20, -30, 50, -10); ctx.stroke();
-
-    ctx.fillStyle = "rgb(44,26,66)";
-    ctx.beginPath();
-    ctx.moveTo(-38, -48);
-    ctx.bezierCurveTo(-46, -110, -30, -150, 4, -152);
-    ctx.bezierCurveTo(40, -150, 50, -108, 40, -48);
-    ctx.bezierCurveTo(20, -60, -18, -60, -38, -48);
-    ctx.closePath(); ctx.fill();
-
-    ctx.fillStyle = "rgb(27,16,48)";
-    ctx.beginPath();
-    ctx.moveTo(-2, -208);
-    ctx.bezierCurveTo(-40, -206, -54, -170, -46, -130);
-    ctx.bezierCurveTo(-52, -90, -46, -60, -30, -40);
-    ctx.bezierCurveTo(-40, -90, -34, -150, -10, -186);
-    ctx.closePath(); ctx.fill();
-
-    ctx.fillStyle = "rgb(44,26,66)";
-    ctx.beginPath(); ctx.arc(6, -196, 24, 0, TAU); ctx.fill();
-    ctx.fillStyle = "rgb(27,16,48)";
-    ctx.beginPath(); ctx.arc(-14, -214, 10, 0, TAU); ctx.fill();
-
-    ctx.strokeStyle = "rgb(44,26,66)"; ctx.lineWidth = 14; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(-30, -96); ctx.bezierCurveTo(-46, -80, -54, -58, -50, -38); ctx.stroke();
-
-    const period = 5.0;
-    const ph = (t % period) / period;
-    let ang;
-    if (ph < 0.10)      ang = 0;
-    else if (ph < 0.35) ang = 18 * ((ph - 0.10) / 0.25);
-    else if (ph < 0.65) ang = 18;
-    else if (ph < 0.90) ang = 18 * (1 - (ph - 0.65) / 0.25);
-    else                ang = 0;
-
-    ctx.save();
-    ctx.translate(34, -118);
-    ctx.rotate(ang * Math.PI / 180);
-    ctx.translate(-34, 118);
-    ctx.strokeStyle = "rgb(44,26,66)"; ctx.lineWidth = 14; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(34, -118); ctx.bezierCurveTo(54, -108, 62, -160, 46, -190); ctx.stroke();
-    ctx.fillStyle = "rgb(61,43,26)";
-    ctx.beginPath(); ctx.arc(44, -196, 15, 0, TAU); ctx.fill();
-    ctx.strokeStyle = "rgba(107,74,42,0.7)"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(32, -204); ctx.quadraticCurveTo(44, -214, 56, -204); ctx.stroke();
-    ctx.strokeStyle = "rgb(232,201,138)"; ctx.lineWidth = 3; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(38, -206); ctx.lineTo(18, -222); ctx.stroke();
-    ctx.restore();
-
-    ctx.restore();
-  }
-
   let last = performance.now() / 1000;
   function frame(now) {
     const t = now / 1000;
@@ -302,8 +235,6 @@
 
     drawPalm(w * 0.07, h, 1.0, false, t * 1.0);
     drawPalm(w * 0.94, h, 1.0, true,  t * 1.15 + 1.7);
-
-    drawWoman(w * 0.40, h * 0.978, t);
 
     ctx.strokeStyle = "rgba(231,237,247,0.35)"; ctx.lineWidth = 1.8;
     ctx.beginPath();
