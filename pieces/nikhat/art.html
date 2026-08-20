@@ -5,20 +5,254 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>My art</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0b0f1a; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: #7ec8e3; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
 </style>
 </head>
 <body>
-<!-- ============================================================
-     THIS IS YOUR BLANK SLOT.  Paint it however you like.
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, horizonY, skyGrad;
 
-     Open Claude Code in this project and describe what you want here, e.g.:
-        "make colorful fireworks that explode"
-        "make a swirling rainbow spiral"
-        "make glowing particles that follow my mouse"
+function resize() {
+  W = canvas.width = canvas.clientWidth = window.innerWidth;
+  H = canvas.height = canvas.clientHeight = window.innerHeight;
+  horizonY = H * 0.62;
+  skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+  skyGrad.addColorStop(0, '#5fb8e8');
+  skyGrad.addColorStop(0.6, '#a9dcf2');
+  skyGrad.addColorStop(1, '#dff1f4');
+}
+window.addEventListener('resize', resize);
+resize();
 
-     Save, refresh, and make it yours.
-     When you love it:  git pull -> git add . -> git commit -> git push
-     ============================================================ -->
+// ---- wind: a slow, organic gust that travels left to right ----
+function windAt(x, t) {
+  // base oscillation plus a slower gust envelope, phase-shifted by x so
+  // the breeze visibly sweeps across the scene left -> right
+  const local = t - x * 0.0016;
+  const base = Math.sin(local * 1.3) * 0.5 + 0.5;
+  const gust = Math.sin(local * 0.35) * 0.5 + 0.5;
+  return base * 0.45 + gust * 0.55; // 0..1
+}
+
+// ---- clouds ----
+const clouds = Array.from({ length: 5 }, (_, i) => ({
+  x: Math.random(),
+  y: 0.08 + Math.random() * 0.22,
+  scale: 0.6 + Math.random() * 0.9,
+  speed: 6 + Math.random() * 6,
+}));
+
+function drawCloud(cx, cy, scale) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 34, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(24, -8, 24, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(-24, -4, 22, 13, 0, 0, Math.PI * 2);
+  ctx.ellipse(8, 8, 28, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---- hills (parallax horizon) ----
+function drawHill(baseY, amp, color, offset) {
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  ctx.lineTo(0, baseY);
+  for (let x = 0; x <= W; x += 20) {
+    const y = baseY - Math.sin(x * 0.006 + offset) * amp;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// ---- birds ----
+const birds = Array.from({ length: 8 }, () => makeBird());
+function makeBird() {
+  return {
+    x: Math.random() * -1200 - 40,
+    y: 40 + Math.random() * (horizonY ? horizonY * 0.45 : 200),
+    baseSpeed: 40 + Math.random() * 35,
+    size: 10 + Math.random() * 10,
+    flapPhase: Math.random() * Math.PI * 2,
+    flapSpeed: 7 + Math.random() * 3,
+    bobPhase: Math.random() * Math.PI * 2,
+  };
+}
+
+function drawBird(b, t) {
+  const flap = Math.sin(t * b.flapSpeed + b.flapPhase); // -1..1
+  const wingAngle = flap * 0.9;
+  const s = b.size;
+  const y = b.y + Math.sin(t * 0.6 + b.bobPhase) * 6;
+
+  ctx.save();
+  ctx.translate(b.x, y);
+  ctx.strokeStyle = 'rgba(40,40,45,0.85)';
+  ctx.lineWidth = Math.max(1.5, s * 0.14);
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(-s, Math.sin(wingAngle) * s * 0.6);
+  ctx.quadraticCurveTo(-s * 0.4, -s * 0.5 - Math.abs(wingAngle) * s * 0.3, 0, 0);
+  ctx.quadraticCurveTo(s * 0.4, -s * 0.5 - Math.abs(wingAngle) * s * 0.3, s, Math.sin(wingAngle) * s * 0.6);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ---- flower field ----
+const FLOWER_COLORS = ['#ff6fa5', '#ffd23f', '#c084fc', '#ff8c42', '#f472b6', '#fca5a5'];
+const flowers = [];
+function buildFlowers() {
+  flowers.length = 0;
+  const rows = 3;
+  for (let r = 0; r < rows; r++) {
+    const rowY = horizonY + 18 + r * ((H - horizonY) / (rows + 0.6));
+    const count = Math.ceil(W / (26 - r * 2));
+    for (let i = 0; i < count; i++) {
+      flowers.push({
+        x: (i + Math.random() * 0.6) * (W / count),
+        y: rowY + (Math.random() * 10 - 5),
+        h: 26 + Math.random() * 22 - r * 4,
+        color: FLOWER_COLORS[Math.floor(Math.random() * FLOWER_COLORS.length)],
+        petalR: 5 + Math.random() * 4,
+        phase: Math.random() * Math.PI * 2,
+        swayAmp: 0.12 + Math.random() * 0.10,
+      });
+    }
+  }
+}
+
+function drawFlower(f, t) {
+  const wind = windAt(f.x, t);
+  const sway = Math.sin(t * 1.6 + f.phase + f.x * 0.01) * f.swayAmp * (0.4 + wind);
+  const bloom = 0.55 + 0.45 * wind; // opens wider as the breeze gusts through
+
+  ctx.save();
+  ctx.translate(f.x, f.y);
+
+  // stem
+  ctx.strokeStyle = '#3f8f3f';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  const cx = Math.sin(sway) * f.h * 0.55;
+  ctx.quadraticCurveTo(cx * 0.6, -f.h * 0.5, cx, -f.h);
+  ctx.stroke();
+
+  // a couple of leaves
+  ctx.fillStyle = '#4caf50';
+  const leafY = -f.h * 0.45;
+  ctx.beginPath();
+  ctx.ellipse(cx * 0.5 + 5, leafY, 6, 2.5, sway + 0.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // bloom head
+  ctx.translate(cx, -f.h);
+  ctx.rotate(sway * 0.6);
+  const petals = 6;
+  for (let p = 0; p < petals; p++) {
+    const ang = (p / petals) * Math.PI * 2;
+    const r = f.petalR * bloom;
+    ctx.save();
+    ctx.rotate(ang);
+    ctx.translate(r, 0);
+    ctx.fillStyle = f.color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r, r * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#ffe066';
+  ctx.beginPath();
+  ctx.arc(0, 0, f.petalR * 0.55 * bloom, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ---- grass along the very front, showing the breeze directly ----
+const grass = [];
+function buildGrass() {
+  grass.length = 0;
+  for (let x = 0; x < W; x += 6) {
+    grass.push({
+      x,
+      y: H - Math.random() * 6,
+      h: 14 + Math.random() * 18,
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+function drawGrass(g, t) {
+  const wind = windAt(g.x, t);
+  const lean = (0.3 + wind * 0.9) * Math.sin(t * 1.6 + g.phase * 0.2);
+  ctx.beginPath();
+  ctx.moveTo(g.x, g.y);
+  ctx.quadraticCurveTo(g.x + lean * g.h * 0.5, g.y - g.h * 0.6, g.x + lean * g.h, g.y - g.h);
+  ctx.strokeStyle = '#2f7d32';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+}
+
+buildFlowers();
+buildGrass();
+window.addEventListener('resize', () => { buildFlowers(); buildGrass(); });
+
+let start = performance.now();
+function frame(now) {
+  const t = (now - start) / 1000;
+  ctx.clearRect(0, 0, W, H);
+
+  // sky
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, horizonY + 2);
+
+  // sun
+  ctx.fillStyle = 'rgba(255,247,214,0.9)';
+  ctx.beginPath();
+  ctx.arc(W * 0.85, H * 0.16, 46, 0, Math.PI * 2);
+  ctx.fill();
+
+  // clouds drift with the breeze
+  for (const c of clouds) {
+    const wind = windAt(c.x * W, t);
+    c.x += ((c.speed + wind * 10) / W) * (1 / 60);
+    if (c.x > 1.2) c.x = -0.2;
+    drawCloud(c.x * W, c.y * H, c.scale);
+  }
+
+  // horizon hills, back to front
+  drawHill(horizonY + 10, 10, '#bfe3a0', 1.3);
+  drawHill(horizonY + 22, 14, '#a3d885', 3.7);
+
+  // flowers on the field
+  for (const f of flowers) drawFlower(f, t);
+
+  // birds flying across the sky
+  for (const b of birds) {
+    const wind = windAt(b.x, t);
+    b.x += (b.baseSpeed + wind * 25) * (1 / 60);
+    drawBird(b, t);
+    if (b.x - b.size > W + 40) Object.assign(b, makeBird(), { x: -60 - Math.random() * 300 });
+  }
+
+  // grass in the foreground, right at the horizon breeze line
+  for (const g of grass) drawGrass(g, t);
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
 </body>
 </html>
