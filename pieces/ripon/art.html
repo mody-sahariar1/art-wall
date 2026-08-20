@@ -29,9 +29,10 @@
   const SUN_LOW = [255, 78, 38], SUN_HIGH = [255, 246, 206];
   const CLOUD_WHITE = [238, 242, 248], CLOUD_STORM = [58, 64, 78];
 
-  const TAU = Math.PI * 2;
-  const PERIOD = 30;          // seconds for a full day + night (slow)
-  const PI = Math.PI;
+  const TAU = Math.PI * 2, PI = Math.PI;
+  const PERIOD = 45;         // seconds for a full day + night (even slower)
+
+  const MAXSNOW = 220, MAXDEB = 22, MAXRAIN = 70;
 
   // twinkling stars
   const stars = Array.from({ length: 60 }, () => ({
@@ -39,32 +40,32 @@
     ph: Math.random() * TAU, sp: 0.8 + Math.random() * 2.2
   }));
 
-  // clouds (rebuilt on resize so they scale)
-  let clouds = [];
-  function buildClouds() {
+  // rain (normalised)
+  const rain = Array.from({ length: MAXRAIN }, () => ({
+    x: Math.random(), y: Math.random(), len: 10 + Math.random() * 14, sp: 650 + Math.random() * 500
+  }));
+
+  let clouds = [], snow = [], debris = [];
+  function buildScene() {
     clouds = [];
     for (let i = 0; i < 7; i++) {
-      const puffs = [];
-      const pc = 4 + ((Math.random() * 3) | 0);
+      const puffs = []; const pc = 4 + ((Math.random() * 3) | 0);
       for (let j = 0; j < pc; j++)
         puffs.push({ dx: (Math.random() - 0.5) * 70, dy: (Math.random() - 0.5) * 22, r: 22 + Math.random() * 26 });
-      clouds.push({
-        x: Math.random() * w, y: h * (0.12 + Math.random() * 0.32),
-        s: 0.7 + Math.random() * 0.8, speed: 18 + Math.random() * 30, puffs
-      });
+      clouds.push({ x: Math.random() * w, y: h * (0.12 + Math.random() * 0.32), s: 0.7 + Math.random() * 0.8, speed: 18 + Math.random() * 30, puffs });
     }
+    snow = [];
+    for (let i = 0; i < MAXSNOW; i++)
+      snow.push({ x: Math.random() * w, y: Math.random() * h, s: 0.6 + Math.random() * 2.4, ph: Math.random() * TAU, sw: 0.6 + Math.random() * 1.4, fall: 40 + Math.random() * 55 });
+    debris = [];
+    for (let i = 0; i < MAXDEB; i++)
+      debris.push({ x: Math.random() * w, y: Math.random() * h * 0.8, s: 2 + Math.random() * 4, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 6, wob: Math.random() * TAU, col: [46 + Math.random() * 40, 40 + Math.random() * 28, 32 + Math.random() * 22] });
   }
-
-  // rain pool (normalised coords)
-  const MAXRAIN = 160;
-  const rain = Array.from({ length: MAXRAIN }, () => ({
-    x: Math.random(), y: Math.random(), len: 10 + Math.random() * 14, sp: 600 + Math.random() * 500
-  }));
 
   // lightning
   let flash = 0, boltTimer = 1.5, bolt = null, boltLife = 0;
 
-  function resize() { w = cv.width = innerWidth; h = cv.height = innerHeight; buildClouds(); }
+  function resize() { w = cv.width = innerWidth; h = cv.height = innerHeight; buildScene(); }
   resize();
   addEventListener("resize", resize);
 
@@ -77,19 +78,17 @@
     const alt = Math.sin(theta);
     const nightness = clamp(-alt / 0.35, 0, 1);
 
-    // storm builds toward midday (theta = pi/2), clears before sunset
     let storm = 0;
     if (theta < PI) storm = smooth(0.16 * PI, 0.42 * PI, theta) * (1 - smooth(0.58 * PI, 0.82 * PI, theta));
+    const wind = storm * (0.85 + 0.15 * Math.sin(t * 1.4));   // gusty, blowing right
 
-    // --- sky (surroundings change colour) ---
+    // --- sky ---
     let top, bot;
     if (alt >= 0) { const d = smooth(0, 0.45, alt); top = mix(HORIZON.top, DAY.top, d); bot = mix(HORIZON.bot, DAY.bot, d); }
     else { const n = smooth(0, -0.4, alt); top = mix(HORIZON.top, NIGHT.top, n); bot = mix(HORIZON.bot, NIGHT.bot, n); }
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, rgb(top)); g.addColorStop(1, rgb(bot));
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-
-    // storm darkens the whole sky
     if (storm > 0.001) { ctx.fillStyle = rgba([18, 22, 32], storm * 0.62); ctx.fillRect(0, 0, w, h); }
 
     const horizonY = h * 0.82;
@@ -105,7 +104,7 @@
       }
     }
 
-    // --- sun (day), dimmed / hidden by the storm ---
+    // --- sun (day), hidden by storm ---
     if (alt > -0.02) {
       const sunA = 1 - storm * 0.9;
       if (sunA > 0.02) {
@@ -120,9 +119,9 @@
       }
     }
 
-    // --- moon rises once the sun is gone ---
+    // --- moon rises at night ---
     if (theta > PI) {
-      const np = (theta - PI) / PI;            // 0..1 across the night
+      const np = (theta - PI) / PI;
       const mAlt = Math.sin(np * PI);
       if (mAlt > -0.02) {
         const mx = cx - Math.cos(np * PI) * R, my = horizonY - mAlt * R;
@@ -139,50 +138,75 @@
       }
     }
 
-    // --- clouds: white by day, storm-grey at midday, cleared by sunset ---
-    const calm = (theta < PI)
-      ? smooth(0.03 * PI, 0.15 * PI, theta) * (1 - smooth(0.62 * PI, 0.95 * PI, theta))
-      : 0;
+    // --- clouds ---
+    const calm = (theta < PI) ? smooth(0.03 * PI, 0.15 * PI, theta) * (1 - smooth(0.62 * PI, 0.95 * PI, theta)) : 0;
     const coverage = clamp(0.6 * calm + storm, 0, 1);
     const cloudCol = mix(CLOUD_WHITE, CLOUD_STORM, storm);
     const cloudA = coverage * 0.85;
     for (const c of clouds) {
-      c.x += c.speed * dt;
-      if (c.x > w + 120) c.x = -120;
+      c.x += c.speed * dt; if (c.x > w + 120) c.x = -120;
       if (cloudA > 0.02) {
         ctx.fillStyle = rgba(cloudCol, cloudA);
-        for (const p of c.puffs) {
-          ctx.beginPath();
-          ctx.arc(c.x + p.dx * c.s, c.y + p.dy * c.s, p.r * c.s, 0, TAU);
-          ctx.fill();
-        }
+        for (const p of c.puffs) { ctx.beginPath(); ctx.arc(c.x + p.dx * c.s, c.y + p.dy * c.s, p.r * c.s, 0, TAU); ctx.fill(); }
       }
     }
 
-    // --- rain during the storm ---
+    // --- blizzard whiteout haze at the peak ---
+    if (storm > 0.3) { ctx.fillStyle = rgba([208, 214, 224], (storm - 0.3) * 0.30); ctx.fillRect(0, 0, w, h); }
+
+    // --- rain (storm) ---
     if (storm > 0.12) {
       const n = (MAXRAIN * storm) | 0;
-      ctx.strokeStyle = "rgba(170,195,230,0.5)";
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "rgba(175,198,232,0.4)"; ctx.lineWidth = 1.2;
       ctx.beginPath();
       for (let i = 0; i < n; i++) {
         const d = rain[i];
-        d.y += (d.sp * dt) / h;
-        if (d.y > 1.05) { d.y = -0.05; d.x = Math.random(); }
+        d.y += (d.sp * dt) / h; if (d.y > 1.05) { d.y = -0.05; d.x = Math.random(); }
         const x = d.x * w, y = d.y * h;
-        ctx.moveTo(x, y); ctx.lineTo(x + 2, y + d.len);
+        ctx.moveTo(x, y); ctx.lineTo(x + 4 + wind * 10, y + d.len);
       }
       ctx.stroke();
     }
 
-    // --- lightning during the storm ---
+    // --- blizzard: driving snow (storm), blown by the wind ---
+    if (storm > 0.1) {
+      const n = (MAXSNOW * storm) | 0;
+      const push = wind * 300;
+      for (let i = 0; i < n; i++) {
+        const f = snow[i];
+        f.y += (f.fall + f.s * 30) * dt;
+        f.x += (push + Math.sin(t * f.sw + f.ph) * 22) * dt;
+        if (f.y > h + 6) { f.y = -6; f.x = Math.random() * w; }
+        if (f.x > w + 6) f.x -= (w + 12);
+        if (f.x < -6) f.x += (w + 12);
+        ctx.fillStyle = "rgba(255,255,255," + clamp(0.45 + f.s * 0.18, 0, 0.95).toFixed(2) + ")";
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.s, 0, TAU); ctx.fill();
+      }
+    }
+
+    // --- storm debris flying across ---
+    if (storm > 0.15) {
+      for (const d of debris) {
+        d.x += (wind * 470 + Math.cos(d.wob + t * 2) * 24) * dt;
+        d.y += (Math.sin(d.wob + t * 2.5) * 45 + 26) * dt;
+        d.rot += d.vr * dt;
+        if (d.x > w + 20) { d.x = -20; d.y = Math.random() * h * 0.8; }
+        if (d.y > h + 20) { d.y = -20; d.x = Math.random() * w * 0.5; }
+        ctx.save();
+        ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+        ctx.fillStyle = rgba(d.col, 0.85);
+        ctx.fillRect(-d.s, -d.s * 0.55, d.s * 2, d.s * 1.1);
+        ctx.restore();
+      }
+    }
+
+    // --- lightning ---
     if (storm > 0.35) {
       boltTimer -= dt;
       if (boltTimer <= 0) {
         flash = 1; boltLife = 0.14;
         const bx = w * (0.25 + Math.random() * 0.5);
-        bolt = [{ x: bx, y: h * 0.14 }];
-        let y = h * 0.14;
+        bolt = [{ x: bx, y: h * 0.14 }]; let y = h * 0.14;
         while (y < horizonY) { y += h * (0.05 + Math.random() * 0.07); bolt.push({ x: bx + (Math.random() - 0.5) * w * 0.10, y }); }
         boltTimer = (0.7 + Math.random() * 1.8) * (1.2 - storm);
       }
@@ -191,8 +215,7 @@
     if (boltLife > 0 && bolt) {
       boltLife -= dt;
       ctx.strokeStyle = "rgba(235,240,255," + clamp(boltLife / 0.14, 0, 1).toFixed(2) + ")";
-      ctx.lineWidth = 2.2;
-      ctx.beginPath(); ctx.moveTo(bolt[0].x, bolt[0].y);
+      ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(bolt[0].x, bolt[0].y);
       for (let i = 1; i < bolt.length; i++) ctx.lineTo(bolt[i].x, bolt[i].y);
       ctx.stroke();
     }
