@@ -85,11 +85,11 @@ function drawSun(t) {
 
 // ---------- Planets ----------
 const planets = [
-  { dist: 70,  speed: 0.9,  radius: 7,  angle: Math.random() * 7, color: '#c98d5d', spin: 2.2, ring: false },
-  { dist: 110, speed: 0.6,  radius: 11, angle: Math.random() * 7, color: '#7fb2e5', spin: 1.4, ring: false },
-  { dist: 160, speed: 0.4,  radius: 9,  angle: Math.random() * 7, color: '#e0654f', spin: 1.8, ring: false },
-  { dist: 215, speed: 0.27, radius: 16, angle: Math.random() * 7, color: '#e8c78a', spin: 1.0, ring: true  },
-  { dist: 270, speed: 0.18, radius: 12, angle: Math.random() * 7, color: '#8fd8d1', spin: 1.6, ring: false }
+  { dist: 70,  speed: 0.45,  radius: 7,  angle: Math.random() * 7, color: '#c98d5d', spin: 2.2, ring: false },
+  { dist: 110, speed: 0.3,  radius: 11, angle: Math.random() * 7, color: '#7fb2e5', spin: 1.4, ring: false },
+  { dist: 160, speed: 0.2, radius: 9,  angle: Math.random() * 7, color: '#e0654f', spin: 1.8, ring: false },
+  { dist: 215, speed: 0.135, radius: 16, angle: Math.random() * 7, color: '#e8c78a', spin: 1.0, ring: true  },
+  { dist: 270, speed: 0.09, radius: 12, angle: Math.random() * 7, color: '#8fd8d1', spin: 1.6, ring: false }
 ];
 
 function drawOrbitPath(dist) {
@@ -146,7 +146,7 @@ function spawnMeteor() {
   const fromLeft = Math.random() < 0.5;
   const x = fromLeft ? -20 : W + 20;
   const y = Math.random() * H * 0.6;
-  const speed = Math.random() * 6 + 6;
+  const speed = Math.random() * 3 + 3;
   const dir = fromLeft ? 1 : -1;
   meteors.push({
     x, y,
